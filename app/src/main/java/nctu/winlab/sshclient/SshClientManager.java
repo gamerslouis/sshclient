@@ -388,6 +388,11 @@ public class SshClientManager implements SshClientService {
         return width;
     }
 
+    public SshClient getSshClient(String deviceID) {
+        String deviceName = convert2name(deviceID);
+        return clients.getOrDefault(deviceID, null);
+    }
+
     private String convert2name(String deviceID) {
         try {
             Integer index = Integer.parseInt(deviceID);
@@ -463,6 +468,7 @@ public class SshClientManager implements SshClientService {
     }
 
     public static enum DeviceModel {
+        DGS_3000,
         DGS_3630,
         DXS_5000,
         SERVER,

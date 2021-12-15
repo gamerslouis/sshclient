@@ -129,4 +129,10 @@ public interface SshClientService {
      * @return a list containing field length: name, IP, model, username, port
      */
     public int[] getWidth();
+    /**
+     * Get Sshclient for certain device
+     * @param deviceID switch name
+     * @return a Sshclient; return null if ssh client not exist
+     */
+    public SshClient getSshClient(String deviceID);
 }

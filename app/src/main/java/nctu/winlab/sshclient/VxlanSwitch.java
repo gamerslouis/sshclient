@@ -10,7 +10,7 @@ public interface VxlanSwitch {
     public ObjectNode setVxlanTenantSystemLocal(String vni, String mac, String port, boolean add);
     public ObjectNode setVxlanTenantSystemRemote(String vni, String mac, String remoteIp, boolean add);
     public ObjectNode showVxlanTenantSystemLocal();
-    public ObjectNode showVxlanTenantSystemRemove();
+    public ObjectNode showVxlanTenantSystemRemote();
     public ObjectNode showVxlan();
     public ObjectNode testConnection();
 }

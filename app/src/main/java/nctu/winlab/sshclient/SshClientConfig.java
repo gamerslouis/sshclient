@@ -48,6 +48,10 @@ public class SshClientConfig extends Config<ApplicationId> {
                     client = new DXS5000Client(ip, port, username, password, model);
                     break;
                 }
+                case DGS_3000: {
+                    client = new DGS3000Client(ip, port, username, password, model);
+                    break;
+                }
                 case DGS_3630: {
                     client = new DGS3630Client(ip, port, username, password, model);
                     break;

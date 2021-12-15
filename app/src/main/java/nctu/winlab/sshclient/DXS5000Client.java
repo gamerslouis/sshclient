@@ -15,7 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-public class DXS5000Client extends SshShellClient implements SwitchClient, VxlanSwitch {
+public class DXS5000Client extends SshShellClient implements SwitchClient, VxlanSwitch, VlanSwitch {
     private static Logger log = Logger.getLogger(DXS5000Client.class.getName());
 
     public DXS5000Client(String ip, String port, String username, String password, String model) {
@@ -168,6 +168,8 @@ public class DXS5000Client extends SshShellClient implements SwitchClient, Vxlan
 
     @Override
     public ObjectNode setVxlanVtep(String vnid, String ip, String mac) {
+        log.info(vnid + " " + ip + " " + mac);
+        log.info("vxlan " + vnid + " vtep " + ip + (mac.isEmpty() ? "" : new StringBuilder().append(" tenant-system ").append(mac).toString()));
         ObjectNode res = createGeneralReply();
         try {
             String reply = commander.addCmd("enable", "configure").addCmd("vxlan enable").addMainCmd("vxlan " + vnid + " vtep " + ip + (mac.isEmpty() ? "" : new StringBuilder().append(" tenant-system ").append(mac).toString()), new String[0]).addCmd("exit", "exit").sendCmd().recvCmd();
@@ -251,7 +253,7 @@ public class DXS5000Client extends SshShellClient implements SwitchClient, Vxlan
     }
 
     @Override
-    public ObjectNode showVxlanTenantSystemRemove() {
+    public ObjectNode showVxlanTenantSystemRemote() {
         ObjectNode res = createGeneralReply();
         ArrayNode hostList = res.putArray("hosts");
         try {
@@ -302,6 +304,109 @@ public class DXS5000Client extends SshShellClient implements SwitchClient, Vxlan
         }
         return res;
     }
+
+    @Override
+    public ObjectNode setSwitchPortMode(String intf, String mode) {
+        ObjectNode res = createGeneralReply();
+        log.info(intf + " " + mode);
+        log.info(mode == null ? "no switchport mode": ("switchport mode " + mode));
+
+        try {
+            String reply = commander.addCmd("enable", "configure").addCmd("interface "+ intf).addMainCmd(mode == null ? "no switchport mode": ("switchport mode " + mode)).addCmd("exit", "exit", "exit").sendCmd().recvCmd();
+            res.put("raw", reply);
+        }
+        catch (Exception e) {
+            res.put("error", true);
+            res.put("msg", e.getMessage());
+        }
+        return res;
+    }
+    
+    @Override
+    public ObjectNode setSwitchPortAccessVlan(String intf, String vlan) {
+        log.info(intf + " " + vlan);
+        log.info("switchport access vlan " + vlan);
+        ObjectNode res = createGeneralReply();
+        try {
+            String reply = commander.addCmd("enable", "configure").addCmd("interface " + intf).addMainCmd("switchport access vlan " + vlan).addCmd("exit", "exit", "exit").sendCmd().recvCmd();
+            res.put("raw", reply);
+        }
+        catch (Exception e) {
+            res.put("error", true);
+            res.put("msg", e.getMessage());
+        }
+        return res;
+    }
+    
+    @Override
+    public ObjectNode setVlanGateway(String vlan, String ip, String mask) {
+        ObjectNode res = createGeneralReply();
+        try {
+            String reply = commander.addCmd("enable", "configure").addCmd("interface vlan " + vlan).addMainCmd("routing", "ip address " + ip + " " + mask + "\n").addCmd("exit", "exit").sendCmd().recvCmd();
+            res.put("raw", reply);
+        }
+        catch (Exception e) {
+            res.put("error", true);
+            res.put("msg", e.getMessage());
+        }
+        log.info(res.toString());
+        return res;
+    }
+    
+    @Override
+    public ObjectNode showVlan() {
+        ObjectNode res = createGeneralReply();
+        ArrayNode vlanList = res.putArray("vlans");
+
+        try {
+            String[] reply = commander.addCmd("enable").addMainCmd("show vlan", new String[0]).addCmd("exit").sendCmd().recvCmd().split("[\r\n]+");
+            String[] vlans = Arrays.copyOfRange(reply, 3, reply.length);
+
+            for (String vlan : vlans) {
+                String[] infos = (String[])Stream.of(vlan.split("[ \t]+")).filter(i -> !i.isEmpty()).toArray(x$0 -> new String[x$0]);
+                ObjectNode c = mapper().createObjectNode();
+                c.put("id", infos[0]);
+                c.put("name", infos[1]);
+                c.put("type", infos[2]);
+                vlanList.add((JsonNode) c);
+            }
+
+        }
+        catch (Exception e) {
+            res.put("error", true);
+            res.put("msg", e.getMessage());
+        }
+        return res;
+    }
+    
+    @Override
+    public ObjectNode addVlan(String vlanId) {
+        ObjectNode res = createGeneralReply();
+        try {
+            String reply = commander.addCmd("enable", "vlan database").addMainCmd("vlan " + vlanId).addCmd("exit", "exit").sendCmd().recvCmd();
+            res.put("raw", reply);
+        }
+        catch (Exception e) {
+            res.put("error", true);
+            res.put("msg", e.getMessage());
+        }
+        return res;
+    }
+    
+    @Override
+    public ObjectNode deleteVlan(String vlanId) {
+        ObjectNode res = createGeneralReply();
+        try {
+            String reply = commander.addCmd("enable", "vlan database").addMainCmd("no vlan " + vlanId).addCmd("exit", "exit").sendCmd().recvCmd();
+            res.put("raw", reply);
+        }
+        catch (Exception e) {
+            res.put("error", true);
+            res.put("msg", e.getMessage());
+        }
+        return res;
+    }
+
 
     private String processFlowType(String flowType) {
         return flowType.replace("Flow type ", "").replace("DOT", ".").replaceAll("\r\n|\"", "");
